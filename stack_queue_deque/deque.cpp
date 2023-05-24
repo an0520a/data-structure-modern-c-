@@ -64,9 +64,6 @@ Deque<T>::Deque(const Deque& __deque)
 {
     if (__deque.size_ == 0)
     {
-        front_block_ = nullptr, back_block_ = nullptr;
-        front_element_ = nullptr, back_element_ = nullptr;
-
         return;
     }
 
