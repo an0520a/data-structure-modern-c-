@@ -10,9 +10,9 @@ public:
     Deque();
     virtual ~Deque();
     Deque(const Deque& __deque);
-    Deque(Deque&& __deque);
-    void operator=(const Deque& __deque);
-    void operator=(Deque&& __deque);
+    Deque(Deque&& __deque) noexcept;
+    Deque& operator=(const Deque& __deque);
+    Deque& operator=(Deque&& __deque) noexcept;
     void push_front(const T& value__);
     void push_front(T&& __value);
     void push_back(const T& __value);
@@ -26,7 +26,7 @@ public:
     bool empty() const noexcept;
     size_t size() const noexcept;
     void resize(size_t __count, const T& __value = T());
-    void shrink_to_fit();
+    void shrink_to_fit() noexcept;
 protected:
     struct alignas(alignof(T)) DequeBlock
     {
@@ -41,8 +41,12 @@ protected:
     static constexpr size_t kDequeBlockMemoryUnitSize_ = 512; // must be power of 2;
     static constexpr size_t kDequeBlockMemorySize_ = determine_block_size();
     static constexpr size_t kDequeBlockElementCapacity_ = (kDequeBlockMemorySize_ - sizeof(DequeBlock)) / sizeof(T);
-    void constexpr link_block(DequeBlock* __prev, DequeBlock* __next);
-    DequeBlock* make_new_block();
+    [[nodiscard]] DequeBlock* make_new_block();
+    void delete_all_element() noexcept;
+    void delete_all_block() noexcept;
+    void constexpr link_block(DequeBlock* __prev, DequeBlock* __next) noexcept;
+    void prepare_next_block_of_back();
+    void prepare_prev_block_of_front();
     DequeBlock* front_block_;
     DequeBlock* back_block_;
     T* front_element_;
