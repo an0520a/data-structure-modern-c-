@@ -510,15 +510,13 @@ void Deque<T>::resize(size_t __count, const T& __value)
         {
             while (size_ != __count)
             {
-                if (back_element_ == back_block_->block_end_ - 1)
+                back_element_++;
+
+                if (back_element_ == back_block_->block_end_)
                 {
                     prepare_next_block_of_back();
                     back_block_ = back_block_->next_block_;
                     back_element_ = back_block_->block_begin_;
-                }
-                else
-                {
-                    back_element_++;
                 }
 
                 new (back_element_) T(__value);
