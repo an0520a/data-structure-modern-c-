@@ -67,5 +67,6 @@ protected:
 // Also, it should not be possible to access back_block_ from front_block_ via the member variable prev_block_. 
 // Conversely, front_block_ should not be accessible from back_block_ via member variable next_block_.
 // size_ should always indicate the total number of elements present in all blocks.
+// All functions should have strong exception guarantees.
 
 #include "deque.cpp"
