@@ -3,7 +3,6 @@
 #include <new>
 #include "deque.hpp"
 
-
 template <size_t N>
 struct MsbPosStruct
 {
@@ -612,6 +611,18 @@ void Deque<T>::shrink_to_fit() noexcept
 }
 
 template <typename T>
+typename Deque<T>::iterator Deque<T>::begin()
+{
+    return DequeIterator<T>(front_block_, front_element_);
+}
+
+template <typename T>
+typename Deque<T>::iterator Deque<T>::end()
+{
+    return DequeIterator<T>(back_block_, back_element_ + 1);
+}
+
+template <typename T>
 void Deque<T>::prepare_prev_block_of_front()
 {
     if (front_block_->prev_block_ == nullptr)
@@ -728,4 +739,113 @@ typename Deque<T>::DequeBlock* Deque<T>::make_new_block()
     new_block->block_end_ = new_block->block_begin_ + kDequeBlockElementCapacity_;
 
     return new_block;
+}
+
+template <typename T>
+DequeIterator<T>::DequeIterator() noexcept
+: block_pos_(nullptr), element_pos_(nullptr)
+{
+}
+
+template <typename T>
+DequeIterator<T>::DequeIterator(const DequeIterator& __deque_iterator) noexcept
+{
+    block_pos_ = __deque_iterator.block_pos_;
+    element_pos_ = __deque_iterator.element_pos_;
+}
+
+template <typename T>
+DequeIterator<T>::DequeIterator(typename Deque<value_type>::DequeBlock* __block_pos, T* __element_pos)
+: block_pos_(__block_pos), element_pos_(__element_pos)
+{
+}
+
+template <typename T>
+DequeIterator<T>::~DequeIterator()
+{
+    element_pos_ = nullptr;
+    block_pos_ = nullptr;
+}
+
+template <typename T>
+DequeIterator<T>& DequeIterator<T>::operator=(const DequeIterator<T>& __deque_iterator) noexcept
+{
+    element_pos_ = __deque_iterator.element_pos_;
+    block_pos_ = __deque_iterator.block_pos_;
+
+    return *this;
+}
+
+template <typename T>
+DequeIterator<T>& DequeIterator<T>::operator++() noexcept
+{
+    if (element_pos_ == block_pos_->block_end_ - 1 && block_pos_->next_block_ != nullptr)
+    {
+        block_pos_ = block_pos_->next_block_;
+        element_pos_ = block_pos_->block_begin_;
+    }
+    else
+    {
+        element_pos_++;
+    }
+
+    return *this;
+}
+
+template <typename T>
+T& DequeIterator<T>::operator*()
+{
+    return *element_pos_;
+}
+
+template <typename T>
+bool DequeIterator<T>::operator==(const DequeIterator& __deque_iterator) const noexcept
+{
+    return element_pos_ == __deque_iterator.element_pos_;
+}
+
+template <typename T>
+bool DequeIterator<T>::operator!=(const DequeIterator& __deque_iterator) const noexcept
+{
+    return element_pos_ != __deque_iterator.element_pos_;
+}
+
+template <typename T>
+T* DequeIterator<T>::operator->() noexcept
+{
+    return element_pos_;
+}
+
+template <typename T>
+DequeIterator<T> DequeIterator<T>::operator++(int) noexcept
+{
+    DequeIterator<T> it = *this;
+    ++(*this);
+
+    return it;
+}
+
+template <typename T>
+DequeIterator<T>& DequeIterator<T>::operator--() noexcept
+{
+    if (element_pos_ == block_pos_->block_begin_ && block_pos_->prev_block_ != nullptr)
+    {
+        block_pos_ = block_pos_->prev_block_;
+        element_pos_ = block_pos_->block_end_ - 1;
+    }
+    else
+    {
+        element_pos_--;
+    }
+
+    return *this;
+}
+
+template <typename T>
+DequeIterator<T> DequeIterator<T>::operator--(int) noexcept
+{
+    DequeIterator<T> it = *this;
+    --(*this);
+
+    return it;
 }
