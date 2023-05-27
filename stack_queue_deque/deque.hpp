@@ -18,26 +18,41 @@ public:
     Deque& operator=(const Deque& __deque);
     Deque& operator=(Deque&& __deque) noexcept;
 
-    using iterator = DequeIterator<T>;
     using value_type = T;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
+    using iterator = DequeIterator<value_type>;
+    using const_iterator = DequeIterator<const value_type>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     void push_front(const value_type& value__);
     void push_front(value_type&& __value);
     void push_back(const value_type& __value);
     void push_back(value_type&& __value);
+    iterator insert(const_iterator __pos, const value_type& __value);
     void pop_front();
     void pop_back();
-    value_type& front();
-    const value_type& front() const;
-    value_type& back();
-    const value_type& back() const;
+    reference front();
+    const_reference front() const;
+    reference back();
+    const_reference back() const;
     bool empty() const noexcept;
-    size_t size() const noexcept;
-    void resize(size_t __count, const value_type& __value = value_type());
+    size_type size() const noexcept;
+    void resize(size_type __count, const value_type& __value = value_type());
     void shrink_to_fit() noexcept;
-    iterator begin();
-    iterator end();
-
+    iterator begin() const noexcept;
+    iterator end() const noexcept;
+    const_iterator cbegin() const noexcept;
+    const_iterator cend() const noexcept;
+    reverse_iterator rbegin() const noexcept;
+    reverse_iterator rend() const noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    const_reverse_iterator crend() const noexcept;
 protected:
     struct alignas(alignof(T)) DequeBlock
     {
@@ -47,11 +62,11 @@ protected:
         DequeBlock* next_block_;
     };
 
-    static constexpr size_t determine_block_size();
-    static constexpr size_t determine_block_element_capacity();
-    static constexpr size_t kDequeBlockMemoryUnitSize_ = 512; // must be power of 2;
-    static constexpr size_t kDequeBlockMemorySize_ = determine_block_size();
-    static constexpr size_t kDequeBlockElementCapacity_ = (kDequeBlockMemorySize_ - sizeof(DequeBlock)) / sizeof(T);
+    static constexpr size_type determine_block_size();
+    static constexpr size_type determine_block_element_capacity();
+    static constexpr size_type kDequeBlockMemoryUnitSize_ = 512; // must be 512 * 2^n (where n is non-negative integer)
+    static constexpr size_type kDequeBlockMemorySize_ = determine_block_size();
+    static constexpr size_type kDequeBlockElementCapacity_ = determine_block_element_capacity();
     [[nodiscard]] DequeBlock* make_new_block();
     void delete_all_element() noexcept;
     void delete_all_block() noexcept;
@@ -59,20 +74,21 @@ protected:
     void prepare_next_block_of_back();
     void prepare_prev_block_of_front();
 
-    friend struct DequeIterator<T>;
+    friend struct DequeIterator<value_type>;
+    friend struct DequeIterator<const value_type>;
 
     DequeBlock* front_block_;
     DequeBlock* back_block_;
-    T* front_element_;
-    T* back_element_;
-    size_t size_;
+    value_type* front_element_;
+    value_type* back_element_;
+    size_type size_;
 };
 // - Implementation Requirements -
 // When there are no elements, front_element_ and back_element_ must be nullptr.
 // front_block_ and back_block_ must point to blocks containing elements pointed to by
 // front_element_ and back_element_, respectively. 
-// However, when the size is 0, front_block_ and back_block_ can 
-// point to nullptr (when there is no created block) 
+// However, when the size is 0, front_block_ and back_block_ can  point to nullptr 
+// (when there is no created block) 
 // or a block with empty elements (when a created block already exists).
 // You must always be able to access back_block_ from front_block_ through member variable next_block_. 
 // Conversely, back_block_ must be able to access front_block_ via the prev_block_ member variable. 
@@ -118,11 +134,11 @@ public:
     DequeIterator& operator--() noexcept;
     DequeIterator operator--(int) noexcept;
 private:
-    DequeIterator(typename Deque<value_type>::DequeBlock* __block_pos, T* __element_pos);
-    typename Deque<value_type>::DequeBlock* block_pos_;
+    DequeIterator(typename Deque<std::remove_const_t<value_type>>::DequeBlock* __block_pos, value_type* __element_pos);
+    typename Deque<std::remove_const_t<value_type>>::DequeBlock* block_pos_;
     pointer element_pos_;
 
-    friend class Deque<T>;
+    friend class Deque<std::remove_const_t<value_type>>;
 };
 
 #include "deque.cpp"
