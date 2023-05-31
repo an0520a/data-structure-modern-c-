@@ -52,9 +52,110 @@ constexpr typename Deque<T>::size_type Deque<T>::determine_block_element_capacit
 }
 
 template <typename T>
-Deque<T>::Deque()
+Deque<T>::Deque() noexcept
 : front_block_(nullptr), back_block_(nullptr), front_element_(nullptr), back_element_(nullptr), size_(0)
 {
+}
+
+template <typename T>
+Deque<T>::Deque(size_type __count, const value_type& __value)
+: front_block_(nullptr), back_block_(nullptr), front_element_(nullptr), back_element_(nullptr), size_(0)
+{
+    if (__count == 0)
+    {
+        return;
+    }
+
+    front_block_ = make_new_block();
+    back_block_ = front_block_;
+    front_element_ = front_block_->block_begin_ + kDequeBlockElementCapacity_ / 2;
+    back_element_ = front_element_ - 1;
+
+    try
+    {
+        for (size_type i = 0; i < __count; i++)
+        {
+            back_element_++;
+
+            if (back_element_ == back_block_->block_end_)
+            {
+                prepare_next_block_of_back();
+                back_block_ = back_block_->next_block_;
+                back_element_ = back_block_->block_begin_;
+            }
+
+            new (back_element_) value_type(__value);
+
+            size_++;
+        }
+    }
+    catch(const std::exception& error)
+    {
+        if (back_element_ == front_element_)
+        {
+            front_element_ = nullptr;
+            back_element_ = nullptr;
+        }
+        else
+        {
+            back_element_--;
+        }
+
+        delete_all_block();
+
+        throw error;
+    }
+}
+
+template <typename T>
+template <typename InputIt>
+Deque<T>::Deque(InputIt __begin, InputIt __end)
+: front_block_(nullptr), back_block_(nullptr), front_element_(nullptr), back_element_(nullptr), size_(0)
+{
+    if (__begin == __end)
+    {
+        return;
+    }
+
+    try
+    {
+        front_block_ = make_new_block(); // can occured error. but it don't need excetion handling;
+        back_block_ = front_block_;
+        front_element_ = front_block_->block_begin_ + kDequeBlockElementCapacity_ / 2;
+        back_element_ = front_element_ - 1;
+
+        while(__begin != __end)
+        {
+            back_element_++;
+            
+            if (back_element_ == back_block_->block_end_)
+            {
+                prepare_next_block_of_back(); // can occured error
+                back_block_ = back_block_->next_block_;
+                back_element_ = back_block_->block_begin_;
+            }
+
+            new (back_element_) value_type(*__begin); // can occured error
+
+            size_++;
+        }
+    }
+    catch(const std::exception& error)
+    {
+        if (back_element_ == front_element_)
+        {
+            front_element_ = nullptr;
+            back_element_ = nullptr;
+        }
+        else
+        {
+            back_element_--;
+        }
+
+        delete_all_block();
+
+        throw error;
+    }
 }
 
 template <typename T>
@@ -92,7 +193,7 @@ Deque<T>::Deque(const Deque& __deque)
                 new_block = nullptr;
             }
 
-            new (back_element_) T(*current_element);
+            new (back_element_) value_type(*current_element);
             size_++;
         }
     }
@@ -119,6 +220,12 @@ Deque<T>::Deque(Deque&& __deque) noexcept
     __deque.front_element_ = nullptr;
     __deque.back_element_ = nullptr;
     __deque.size_ = 0;
+}
+
+template <typename T>
+Deque<T>::Deque(std::initializer_list<typename Deque<T>::value_type> __init_list)
+{
+    *this = std::move(Deque(__init_list.begin(), __init_list.end()));
 }
 
 template <typename T>
@@ -238,7 +345,7 @@ Deque<T>& Deque<T>::operator=(Deque&& __deque) noexcept
 }
 
 template <typename T>
-void Deque<T>::push_front(const T& __value)
+void Deque<T>::push_front(const Deque<T>::value_type& __value)
 {
     if (empty())
     {
@@ -253,7 +360,7 @@ void Deque<T>::push_front(const T& __value)
 
         try
         {
-            new (front_element_) T(__value);
+            new (front_element_) value_type(__value);
         }
         catch (const std::exception& constructor_exception)
         {
@@ -278,7 +385,7 @@ void Deque<T>::push_front(const T& __value)
 
         try
         {
-            new (front_element_) T(__value);
+            new (front_element_) value_type(__value);
         }
         catch(const std::exception& constructor_exception)
         {
@@ -300,7 +407,7 @@ void Deque<T>::push_front(const T& __value)
 }
 
 template <typename T>
-void Deque<T>::push_front(T&& __value)
+void Deque<T>::push_front(Deque<T>::value_type&& __value)
 {
     if (empty())
     {
@@ -315,7 +422,7 @@ void Deque<T>::push_front(T&& __value)
 
         try
         {
-            new (front_element_) T(std::move(__value));
+            new (front_element_) value_type(std::move(__value));
         }
         catch (const std::exception& constructor_exception)
         {
@@ -340,7 +447,7 @@ void Deque<T>::push_front(T&& __value)
 
         try
         {
-            new (front_element_) T(std::move(__value));
+            new (front_element_) value_type(std::move(__value));
         }
         catch (const std::exception& constructor_exception)
         {
@@ -362,7 +469,7 @@ void Deque<T>::push_front(T&& __value)
 }
 
 template <typename T>
-void Deque<T>::push_back(const T& __value)
+void Deque<T>::push_back(const Deque<T>::value_type& __value)
 {
     if (empty())
     {
@@ -377,7 +484,7 @@ void Deque<T>::push_back(const T& __value)
 
         try
         {
-            new (back_element_) T(__value);
+            new (back_element_) value_type(__value);
         }
         catch (const std::exception& constructor_exception)
         {
@@ -402,7 +509,7 @@ void Deque<T>::push_back(const T& __value)
 
         try
         {
-            new (back_element_) T(__value);
+            new (back_element_) value_type(__value);
         }
         catch (const std::exception& constructor_exception)
         {
@@ -424,7 +531,7 @@ void Deque<T>::push_back(const T& __value)
 }
 
 template <typename T>
-void Deque<T>::push_back(T&& __value)
+void Deque<T>::push_back(Deque<T>::value_type&& __value)
 {
     if (empty())
     {
@@ -439,7 +546,7 @@ void Deque<T>::push_back(T&& __value)
 
         try
         {
-            new (back_element_) T(std::move(__value));
+            new (back_element_) value_type(std::move(__value));
         }
         catch(const std::exception& constructor_exception)
         {
@@ -464,7 +571,7 @@ void Deque<T>::push_back(T&& __value)
 
         try
         {
-            new (back_element_) T(std::move(__value));
+            new (back_element_) value_type(std::move(__value));
         }
         catch (const std::exception& constructor_exception)
         {
@@ -501,7 +608,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const value_t
 
         try
         {
-            new (back_element_) T(std::move(__value));
+            new (back_element_) value_type(__value);
         }
         catch(const std::exception& constructor_exception)
         {
@@ -510,20 +617,611 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const value_t
 
             throw constructor_exception;
         }
-        
+
         __pos->block_pos_ = front_block_;
         __pos->element_pos_ = front_element_;
+
+        return __pos;
+    }
+    else if (__pos == cend())
+    {
+        push_back(__value);
+
+        return --end();
     }
     else
     {
-        Deque spare_deque = *this;
+        if constexpr (std::is_nothrow_move_constructible_v<value_type>)
+        {
+            push_back(std::move(back()));
+        }
+        else
+        {
+            push_back(back());
+        }
+
+        // current_iterator be end() - 1
+        iterator current_iterator = std::move(--end());
+        // current_next_iterator be end() - 1, current_iterator be end() - 2
+        iterator current_next_iterator = current_iterator--;
+        // current_iterator = end() - 2, current_next_iterator = end() - 1;
+
+        if constexpr (std::is_nothrow_assignable_v<value_type>)
+        {
+            while (current_iterator != __pos)
+            {
+                current_iterator--;
+                current_next_iterator--;
+
+                if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+                {
+                    *current_next_iterator = std::move(*current_iterator);
+                }
+                else
+                {
+                    *current_next_iterator = *current_iterator;
+                }
+            }
+            
+            try
+            {
+                *current_iterator = __value;
+            }
+            catch(const std::exception& copy_assign_error)
+            {
+                // now, current_iterator == __pos;
+                // error occured only specific condition where std::is_nothrow_move_assignable_v == true
+                // so, move assign will not occure error.
+                // and pop_back() is noexcept if deque.empty() == false;
+                const const_iterator end_const_iter = cend();
+
+                while (current_next_iterator != end_const_iter)
+                {
+                    *current_iterator = std::move(*current_next_iterator);
+
+                    ++current_iterator;
+                    ++current_next_iterator;
+                }
+
+                pop_back();
+                throw copy_assign_error;
+            }
+        }
+        else
+        {
+            Deque preserve_deque = *this;
+            preserve_deque.pop_back();
+
+            try
+            {
+                while (current_iterator != __pos)
+                {
+                    current_iterator--;
+                    current_next_iterator--;
+
+                    *current_next_iterator = std::move(*current_iterator);
+                }
+
+                *current_iterator = __value;
+            }
+            catch(const std::exception& assign_error)
+            {
+                *this = std::move(preserve_deque);
+                throw assign_error;
+            }
+        }
+        
+        return __pos;
     }
+}
+
+template <typename T>
+typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, value_type&& __value)
+{
+    if (empty())
+    {
+        if (back_block_ == nullptr)
+        {
+            back_block_ = make_new_block();
+            front_block_ = back_block_;
+        }
+
+        back_element_ = back_block_->block_begin_ + kDequeBlockElementCapacity_ / 2;
+        front_element_ = back_element_;
+
+        try
+        {
+            new (back_element_) value_type(std::move(__value));
+        }
+        catch(const std::exception& constructor_exception)
+        {
+            front_element_ = nullptr;
+            back_element_ = nullptr;
+
+            throw constructor_exception;
+        }
+
+        return { front_block_, front_element_ };
+    }
+    else if (__pos == cend())
+    {
+        push_back(std::move(__value));
+
+        return --end();
+    }
+    else
+    {
+        if constexpr (std::is_nothrow_move_constructible_v<value_type>)
+        {
+            push_back(std::move(back()));
+        }
+        else
+        {
+            push_back(back());
+        }
+
+        // current_iterator be end() - 1
+        iterator current_iterator = std::move(--end());
+        // current_next_iterator be end() - 1, current_iterator be end() - 2
+        iterator current_next_iterator = current_iterator--;
+        // current_iterator = end() - 2, current_next_iterator = end() - 1;
+
+        if constexpr (std::is_nothrow_assignable_v<value_type>)
+        {
+            while (current_iterator != __pos)
+            {
+                current_iterator--;
+                current_next_iterator--;
+
+                if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+                {
+                    *current_next_iterator = std::move(*current_iterator);
+                }
+                else
+                {
+                    *current_next_iterator = *current_iterator;
+                }
+            }
+            
+            try
+            {
+                *current_iterator = std::move(__value);
+            }
+            catch(const std::exception& move_assign_error)
+            {
+                // now, current_iterator == __pos;
+                // error occured only specific condition where std::is_nothrow_copy_assignable_v == true
+                // so, move assign will not occure error.
+                // and pop_back() is noexcept if deque.empty() == false;
+                const const_iterator end_const_iter = cend();
+
+                while (current_next_iterator != end_const_iter)
+                {
+                    *current_iterator = *current_next_iterator;
+
+                    ++current_iterator;
+                    ++current_next_iterator;
+                }
+
+                pop_back();
+                throw move_assign_error;
+            }
+        }
+        else
+        {
+            Deque preserve_deque = *this;
+            preserve_deque.pop_back();
+
+            try
+            {
+                while (current_iterator != __pos)
+                {
+                    current_iterator--;
+                    current_next_iterator--;
+
+                    *current_next_iterator = std::move(*current_iterator);
+                }
+
+                *current_iterator = std::move(__value);
+            }
+            catch(const std::exception& assign_error)
+            {
+                *this = std::move(preserve_deque);
+                throw assign_error;
+            }
+        }
+        
+        return { __pos.block_pos_, __pos.element_pos_ };
+    }
+}
+
+template <typename T>
+typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, size_type __count, const value_type& __value)
+{
+    if (__count == 0)
+    {
+        return __pos;
+    }
+    else if (empty())
+    {
+        Deque<T> tmp_deque(__count, __value);
+        *this = tmp_deque;
+        return begin();
+    }
+    else if constexpr 
+    ((
+        std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
+        std::is_nothrow_assignable_v<value_type>
+    )
+    {
+        // 1) Free up space for insert
+        DequeBlock* backup_back_block = back_block_;
+        size_type need_block_size = (__count - ((back_block_->block_end_ - 1) - back_element_));
+        need_block_size = (need_block_size + (kDequeBlockElementCapacity_ - 1)) / kDequeBlockElementCapacity_;
+
+        try
+        {
+            for (size_t i = 0; i < need_block_size; i++)
+            {
+                prepare_next_block_of_back();
+                back_block_ = back_block_->next_block_;
+            }
+        }
+        catch(const std::exception& bad_alloc_error)
+        {
+            back_block_ = backup_back_block;
+            throw bad_alloc_error;
+        }
+
+        // 2) moving value.
+        iterator current_iter = end();
+        iterator current_count_distance_iter = current_iter;
+        const_iterator origin_end_iterator = end();
+        const_iterator origin_back_iterator = --end();
+        const_iterator new_back_iterator;
+
+        for (size_type i = 0; i < __count; i++)
+        {
+            current_count_distance_iter++;
+        }
+
+        new_back_iterator = current_count_distance_iter;
+        new_back_iterator--;
+        
+        while (current_count_distance_iter != origin_end_iterator && current_iter != __pos)
+        {
+            current_iter--;
+            current_count_distance_iter--;
+
+            if constexpr (std::is_nothrow_move_constructible_v<value_type>)
+            {
+                new (current_count_distance_iter.element_pos_) value_type(std::move(*current_iter));
+            }
+            else
+            {
+                new (current_count_distance_iter.element_pos_) value_type(*current_iter);
+            }
+        }
+
+        while (current_iter != __pos)
+        {
+            current_iter--;
+            current_count_distance_iter--;
+
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                *current_count_distance_iter = std::move(*current_iter);
+            }
+            else
+            {
+                *current_count_distance_iter = *current_iter;
+            }
+        }
+
+        // 3) insert value
+        iterator insert_pos = current_iter;
+        size_type insert_count = 0;
+        bool need_constructor_flag = false;
+
+        try
+        {
+            for (; insert_count < __count && insert_pos != origin_end_iterator; insert_count++, insert_pos++)
+            {
+                *insert_pos = __value;
+            }
+
+            if (insert_count < __count)
+            {
+                need_constructor_flag = true;
+            }
+
+            for (; insert_count < __count; insert_count++, insert_pos++)
+            {
+                new (insert_pos.element_pos_) value_type(__value);
+            }
+        }
+        catch(const std::exception& copy_assign_or_constructor_error)
+        {
+            if (need_constructor_flag)
+            {
+                while (insert_pos != origin_end_iterator)
+                {
+                    insert_pos--;
+
+                    insert_pos->~value_type();
+                }
+            }
+
+            while (current_iter != origin_end_iterator)
+            {
+                if constexpr(std::is_nothrow_move_assignable_v<value_type>)
+                {
+                    *current_iter = std::move(*current_count_distance_iter);
+                }
+                else
+                {
+                    *current_iter = *current_count_distance_iter;
+                }
+
+                current_iter++, current_count_distance_iter++;
+            }
+
+            throw copy_assign_or_constructor_error;
+        }
+
+        back_block_ = new_back_iterator.block_pos_;
+        back_element_ = new_back_iterator.element_pos_;
+        size_ += __count;
+
+        return { __pos.block_pos_, __pos.element_pos_ };
+    }
+    else
+    {
+        Deque tmp_deque(__count, __value);
+        iterator new_pos = tmp_deque.begin();
+        
+        for (iterator it = begin(); it != __pos; it++)
+        {
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                tmp_deque.push_front(std::move(*it));
+            }
+            else
+            {
+                tmp_deque.push_front(*it);
+            }
+        }
+
+        for (iterator it = --end(); it != __pos; it--)
+        {
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                tmp_deque.push_back(std::move(*it));
+            }
+            else
+            {
+                tmp_deque.push_back(*it);
+            }
+        }
+
+        if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+        {
+            tmp_deque.push_back(std::move(*__pos.element_pos_));
+        }
+        else
+        {
+            tmp_deque.push_back(*__pos.element_pos_);
+        }
+
+        return new_pos;
+    }
+}
+
+template <typename T>
+template <typename InputIt>
+typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterator __begin, const_iterator __end)
+{
+
+    if (__begin == __end)
+    {
+        return __pos;
+    }
+    else if (empty())
+    {
+        Deque<T> tmp_deque(__begin, __end);
+        *this = tmp_deque;
+        return begin();
+    }
+    else if constexpr 
+    ((
+        std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
+        std::is_nothrow_assignable_v<value_type>
+    )
+    {
+        // 0) Get size
+        size_t input_size = 0;
+
+        for (const_iterator it = __begin; it != __end; it++)
+        {
+            input_size++;
+        }
+
+        // 1) Free up space for insert
+        DequeBlock* backup_back_block = back_block_;
+        size_type need_block_size = (input_size - ((back_block_->block_end_ - 1) - back_element_));
+        need_block_size = (need_block_size + (kDequeBlockElementCapacity_ - 1)) / kDequeBlockElementCapacity_;
+
+        try
+        {
+            for (size_t i = 0; i < need_block_size; i++)
+            {
+                prepare_next_block_of_back();
+                back_block_ = back_block_->next_block_;
+            }
+        }
+        catch(const std::exception& bad_alloc_error)
+        {
+            back_block_ = backup_back_block;
+            throw bad_alloc_error;
+        }
+
+        // 2) moving value.
+        iterator current_iter = end();
+        iterator current_count_distance_iter = current_iter;
+        const_iterator origin_end_iterator = end();
+        const_iterator origin_back_iterator = --end();
+        const_iterator new_back_iterator;
+
+        for (size_type i = 0; i < input_size; i++)
+        {
+            current_count_distance_iter++;
+        }
+
+        new_back_iterator = current_count_distance_iter;
+        new_back_iterator--;
+
+        while (current_count_distance_iter != origin_end_iterator && current_iter != __pos)
+        {
+            current_iter--;
+            current_count_distance_iter--;
+
+            if constexpr (std::is_nothrow_move_constructible_v<value_type>)
+            {
+                new (current_count_distance_iter.element_pos_) value_type(std::move(*current_iter));
+            }
+            else
+            {
+                new (current_count_distance_iter.element_pos_) value_type(*current_iter);
+            }
+        }
+
+        while (current_iter != __pos)
+        {
+            current_iter--;
+            current_count_distance_iter--;
+
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                *current_count_distance_iter = std::move(*current_iter);
+            }
+            else
+            {
+                *current_count_distance_iter = *current_iter;
+            }
+        }
+
+        // 3) insert value
+        iterator insert_pos = current_iter;
+        const_iterator input_currernt_iter = __begin;
+        size_type insert_count = 0;
+        bool need_constructor_flag = false;
+
+        try
+        {
+            for (; insert_count < input_size && insert_pos != origin_end_iterator; insert_count++, insert_pos++)
+            {
+                *insert_pos = *input_currernt_iter;
+                input_currernt_iter++;
+            }
+
+            if (insert_count < input_size)
+            {
+                need_constructor_flag = true;
+            }
+
+            for (; insert_count < input_size; insert_count++, insert_pos++)
+            {
+                new (insert_pos.element_pos_) value_type(*input_currernt_iter);
+                input_currernt_iter++;
+            }
+        }
+        catch(const std::exception& copy_assign_or_constructor_error)
+        {
+            if (need_constructor_flag)
+            {
+                while (insert_pos != origin_end_iterator)
+                {
+                    insert_pos--;
+
+                    insert_pos->~value_type();
+                }
+            }
+
+            while (current_iter != origin_end_iterator)
+            {
+                if constexpr(std::is_nothrow_move_assignable_v<value_type>)
+                {
+                    *current_iter = std::move(*current_count_distance_iter);
+                }
+                else
+                {
+                    *current_iter = *current_count_distance_iter;
+                }
+
+                current_iter++, current_count_distance_iter++;
+            }
+
+            throw copy_assign_or_constructor_error;
+        }
+
+        back_block_ = new_back_iterator.block_pos_;
+        back_element_ = new_back_iterator.element_pos_;
+        size_ += input_size;
+
+        return { __pos.block_pos_, __pos.element_pos_ };
+    }
+    else
+    {
+        Deque tmp_deque(__begin, __end);
+        iterator new_pos = tmp_deque.begin();
+        
+        for (iterator it = begin(); it != __pos; it++)
+        {
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                tmp_deque.push_front(std::move(*it));
+            }
+            else
+            {
+                tmp_deque.push_front(*it);
+            }
+        }
+
+        for (iterator it = --end(); it != __pos; it--)
+        {
+            if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+            {
+                tmp_deque.push_back(std::move(*it));
+            }
+            else
+            {
+                tmp_deque.push_back(*it);
+            }
+        }
+
+        if constexpr (std::is_nothrow_move_assignable_v<value_type>)
+        {
+            tmp_deque.push_back(std::move(*__pos));
+        }
+        else
+        {
+            tmp_deque.push_back(*__pos);
+        }
+
+        return new_pos;
+    }
+}
+
+template <typename T>
+typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, std::initializer_list<value_type> __init_list)
+{
+    return insert(__pos, __init_list.begin(), __init_list.end());
 }
 
 template <typename T>
 void Deque<T>::pop_front()
 {
-    front_element_->~T();
+    front_element_->~value_type();
     size_--;
 
     if (empty())
@@ -548,7 +1246,7 @@ void Deque<T>::pop_front()
 template <typename T>
 void Deque<T>::pop_back()
 {
-    back_element_->~T();
+    back_element_->~value_type();
     size_--;
 
     if (empty())
@@ -607,7 +1305,7 @@ typename Deque<T>::size_type Deque<T>::size() const noexcept
 }
 
 template <typename T>
-void Deque<T>::resize(Deque<T>::size_type __count, const T& __value)
+void Deque<T>::resize(Deque<T>::size_type __count, const Deque<T>::value_type& __value)
 {
     if (__count > size_)
     {
@@ -631,7 +1329,7 @@ void Deque<T>::resize(Deque<T>::size_type __count, const T& __value)
                     back_element_ = back_block_->block_begin_;
                 }
 
-                new (back_element_) T(__value);
+                new (back_element_) value_type(__value);
 
                 size_++;
             }
@@ -642,7 +1340,7 @@ void Deque<T>::resize(Deque<T>::size_type __count, const T& __value)
 
             while (size_ != original_size)
             {
-                back_element_->~T();
+                back_element_->~value_type();
 
                 if (back_element_ == back_block_->block_begin_)
                 {
@@ -670,7 +1368,7 @@ void Deque<T>::resize(Deque<T>::size_type __count, const T& __value)
     {
         while (size_ != __count)
         {
-            back_element_->~T();
+            back_element_->~value_type();
 
             if (back_element_ == back_block_->block_begin_)
             {
@@ -742,7 +1440,14 @@ typename Deque<T>::iterator Deque<T>::begin() const noexcept
 template <typename T>
 typename Deque<T>::iterator Deque<T>::end() const noexcept
 {
-    return iterator(back_block_, back_element_ + 1);
+    if (back_element_ + 1 == back_block_->block_end_)
+    {
+        return iterator(back_block_->next_block_, back_block_->next_block_->block_begin_);
+    }
+    else
+    {
+        return iterator(back_block_, back_element_ + 1);
+    }
 }
 
 template <typename T>
@@ -832,7 +1537,7 @@ void Deque<T>::delete_all_element() noexcept
     {
         while (front_element_ != back_element_)
         {
-            back_element_->~T();
+            back_element_->~value_type();
             
             if (back_element_ == back_block_->block_begin_)
             {
@@ -845,7 +1550,7 @@ void Deque<T>::delete_all_element() noexcept
             }
         }
 
-        back_element_->~T();
+        back_element_->~value_type();
         front_element_ = nullptr;
         back_element_ = nullptr;
         size_ = 0;
@@ -893,8 +1598,8 @@ typename Deque<T>::DequeBlock* Deque<T>::make_new_block()
 
     new (new_block) DequeBlock{ nullptr, nullptr, nullptr, nullptr };
     uintptr_t block_address = reinterpret_cast<uintptr_t>(new_block + 1);
-    block_address = (block_address + (alignof(T) - 1)) & ~(alignof(T) - 1);
-    new_block->block_begin_ = reinterpret_cast<T *>(block_address);
+    block_address = (block_address + (alignof(value_type) - 1)) & ~(alignof(value_type) - 1);
+    new_block->block_begin_ = reinterpret_cast<value_type *>(block_address);
     new_block->block_end_ = new_block->block_begin_ + kDequeBlockElementCapacity_;
 
     return new_block;
@@ -952,7 +1657,7 @@ DequeIterator<T>& DequeIterator<T>::operator++() noexcept
 }
 
 template <typename T>
-T& DequeIterator<T>::operator*()
+T& DequeIterator<T>::operator*() noexcept
 {
     return *element_pos_;
 }

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <initializer_list>
 
 template <typename value_type>
 struct DequeIterator;
@@ -11,13 +12,6 @@ template <typename T>
 class Deque
 {
 public:
-    Deque();
-    virtual ~Deque();
-    Deque(const Deque& __deque);
-    Deque(Deque&& __deque) noexcept;
-    Deque& operator=(const Deque& __deque);
-    Deque& operator=(Deque&& __deque) noexcept;
-
     using value_type = T;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
@@ -30,11 +24,28 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    Deque() noexcept;
+    explicit Deque(size_type __count, const value_type& __value = value_type());
+    template <typename InputIt>
+    Deque(InputIt __begin, InputIt __end);
+    Deque(const Deque& __deque);
+    Deque(Deque&& __deque) noexcept;
+    Deque(std::initializer_list<value_type> __init_list);
+    virtual ~Deque();
+    Deque& operator=(const Deque& __deque);
+    Deque& operator=(Deque&& __deque) noexcept;
+
     void push_front(const value_type& value__);
     void push_front(value_type&& __value);
     void push_back(const value_type& __value);
     void push_back(value_type&& __value);
     iterator insert(const_iterator __pos, const value_type& __value);
+    iterator insert(const_iterator __pos, value_type&& __value);
+    iterator insert(const_iterator __pos, size_type count, const value_type& __value);
+    template <typename InputIt>
+    iterator insert(const_iterator __pos, const_iterator __begin, const_iterator __end);
+    iterator insert(const_iterator __pos, std::initializer_list<value_type> __init_list);
+
     void pop_front();
     void pop_back();
     reference front();
@@ -54,10 +65,10 @@ public:
     const_reverse_iterator crbegin() const noexcept;
     const_reverse_iterator crend() const noexcept;
 protected:
-    struct alignas(alignof(T)) DequeBlock
+    struct alignas(alignof(value_type)) DequeBlock
     {
-        T* block_begin_;
-        T* block_end_;
+        value_type* block_begin_;
+        value_type* block_end_;
         DequeBlock* prev_block_;
         DequeBlock* next_block_;
     };
@@ -120,7 +131,7 @@ public:
     ~DequeIterator();
     DequeIterator& operator=(const DequeIterator&  __deque_iterator) noexcept;
     DequeIterator& operator++() noexcept;
-    reference operator*();
+    reference operator*() noexcept;
 
     // Legacy input iterator requirement
     bool operator==(const DequeIterator& __deque_iterator) const noexcept;
