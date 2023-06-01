@@ -43,7 +43,7 @@ public:
     iterator insert(const_iterator __pos, value_type&& __value);
     iterator insert(const_iterator __pos, size_type count, const value_type& __value);
     template <typename InputIt>
-    iterator insert(const_iterator __pos, const_iterator __begin, const_iterator __end);
+    iterator insert(const_iterator __pos, InputIt __begin, InputIt __end);
     iterator insert(const_iterator __pos, std::initializer_list<value_type> __init_list);
 
     void pop_front();

@@ -137,6 +137,7 @@ Deque<T>::Deque(InputIt __begin, InputIt __end)
 
             new (back_element_) value_type(*__begin); // can occured error
 
+            __begin++;
             size_++;
         }
     }
@@ -290,7 +291,7 @@ Deque<T>& Deque<T>::operator=(const Deque& __deque)
             delete_all_element();
 
             // copy all element of __deque
-            front_element_ = front_block_ + (__deque.front_element_ - __deque.front_block_->block_begin_);
+            front_element_ = front_block_->block_begin_ + (__deque.front_element_ - __deque.front_block_->block_begin_);
             back_element_ = front_element_ - 1;
             current_block = __deque.front_block_;
             pointer current_element = __deque.front_element_ - 1;
@@ -646,7 +647,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const value_t
         iterator current_next_iterator = current_iterator--;
         // current_iterator = end() - 2, current_next_iterator = end() - 1;
 
-        if constexpr (std::is_nothrow_assignable_v<value_type>)
+        if constexpr (std::is_nothrow_copy_assignable_v<value_type> || std::is_nothrow_move_assignable_v<value_type>)
         {
             while (current_iterator != __pos)
             {
@@ -766,7 +767,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, value_type&& 
         iterator current_next_iterator = current_iterator--;
         // current_iterator = end() - 2, current_next_iterator = end() - 1;
 
-        if constexpr (std::is_nothrow_assignable_v<value_type, value_type>)
+        if constexpr (std::is_nothrow_copy_assignable_v<value_type> || std::is_nothrow_move_assignable_v<value_type>)
         {
             while (current_iterator != __pos)
             {
@@ -851,7 +852,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, size_type __c
     else if constexpr 
     ((
         std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
-        std::is_nothrow_assignable_v<value_type, value_type>
+        (std::is_nothrow_copy_assignable_v<value_type> || std::is_nothrow_move_assignable_v<value_type>)
     )
     {
         // 1) Free up space for insert
@@ -1019,7 +1020,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, size_type __c
 
 template <typename T>
 template <typename InputIt>
-typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterator __begin, const_iterator __end)
+typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, InputIt __begin, InputIt __end)
 {
 
     if (__begin == __end)
@@ -1033,15 +1034,15 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterato
         return begin();
     }
     else if constexpr 
-    ((
-        std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
-        std::is_nothrow_assignable_v<value_type>
+    (
+        (std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
+        (std::is_nothrow_copy_assignable_v<value_type> || std::is_nothrow_move_assignable_v<value_type>)
     )
     {
         // 0) Get size
         size_t input_size = 0;
 
-        for (const_iterator it = __begin; it != __end; it++)
+        for (auto it = __begin; it != __end; it++)
         {
             input_size++;
         }
@@ -1112,7 +1113,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterato
 
         // 3) insert value
         iterator insert_pos = current_iter;
-        const_iterator input_currernt_iter = __begin;
+        auto input_currernt_iter = __begin;
         size_type insert_count = 0;
         bool need_constructor_flag = false;
 
@@ -1165,7 +1166,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterato
         }
 
         back_block_ = new_back_iterator.block_pos_;
-        back_element_ = new_back_iterator.element_pos_;
+        back_element_ = const_cast<pointer>(new_back_iterator.element_pos_);
         size_ += input_size;
 
         return __pos;
