@@ -48,6 +48,7 @@ public:
 
     void pop_front();
     void pop_back();
+    void clear() noexcept;
     reference front();
     const_reference front() const;
     reference back();

@@ -30,17 +30,17 @@ constexpr std::size_t Deque<T>::determine_block_size()
     else
     {
         // Multiples of 512
-        constexpr std::size_t calculate_size = 
+        constexpr std::size_t calculated_size = 
         (required_minimum_memory + (kDequeBlockMemoryUnitSize_ - 1)) & ~(kDequeBlockMemoryUnitSize_ - 1);
 
         // Returns raised to a power of 2
-        if constexpr (calculate_size == (1 << (MsbPos<calculate_size>::value - 1)))
+        if constexpr (calculated_size == (1 << (MsbPos<calculated_size>::value - 1)))
         {
-            return calculate_size;
+            return calculated_size;
         }
         else
         {
-            return 1 << MsbPos<calculate_size>::value;
+            return 1 << MsbPos<calculated_size>::value;
         }
     }
 }
@@ -1267,6 +1267,12 @@ void Deque<T>::pop_back()
             back_element_--;
         }
     }
+}
+
+template <typename T>
+void Deque<T>::clear() noexcept
+{
+    delete_all_element();
 }
 
 template <typename T>
