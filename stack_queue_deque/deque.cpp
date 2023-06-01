@@ -766,7 +766,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, value_type&& 
         iterator current_next_iterator = current_iterator--;
         // current_iterator = end() - 2, current_next_iterator = end() - 1;
 
-        if constexpr (std::is_nothrow_assignable_v<value_type>)
+        if constexpr (std::is_nothrow_assignable_v<value_type, value_type>)
         {
             while (current_iterator != __pos)
             {
@@ -831,7 +831,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, value_type&& 
             }
         }
         
-        return { __pos.block_pos_, __pos.element_pos_ };
+        return __pos;
     }
 }
 
@@ -851,7 +851,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, size_type __c
     else if constexpr 
     ((
         std::is_nothrow_copy_constructible_v<value_type> || std::is_nothrow_move_constructible_v<value_type>) && 
-        std::is_nothrow_assignable_v<value_type>
+        std::is_nothrow_assignable_v<value_type, value_type>
     )
     {
         // 1) Free up space for insert
@@ -973,7 +973,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, size_type __c
         back_element_ = new_back_iterator.element_pos_;
         size_ += __count;
 
-        return { __pos.block_pos_, __pos.element_pos_ };
+        return __pos;
     }
     else
     {
@@ -1168,7 +1168,7 @@ typename Deque<T>::iterator Deque<T>::insert(const_iterator __pos, const_iterato
         back_element_ = new_back_iterator.element_pos_;
         size_ += input_size;
 
-        return { __pos.block_pos_, __pos.element_pos_ };
+        return __pos;
     }
     else
     {
@@ -1611,11 +1611,25 @@ DequeIterator<T>::DequeIterator() noexcept
 {
 }
 
+// template <typename T>
+// DequeIterator<T>::DequeIterator(const DequeIterator& __deque_iterator) noexcept
+// {
+//     block_pos_ = __deque_iterator.block_pos_;
+//     element_pos_ = __deque_iterator.element_pos_;
+// }
+
 template <typename T>
-DequeIterator<T>::DequeIterator(const DequeIterator& __deque_iterator) noexcept
+DequeIterator<T>::DequeIterator(const DequeIterator<std::remove_const_t<value_type>>& __deque_iterator) noexcept
 {
     block_pos_ = __deque_iterator.block_pos_;
-    element_pos_ = __deque_iterator.element_pos_;
+    element_pos_ = reinterpret_cast<pointer>(__deque_iterator.element_pos_);
+}
+
+template <typename T>
+DequeIterator<T>::DequeIterator(const DequeIterator<std::add_const_t<value_type>>& __deque_iterator) noexcept
+{
+    block_pos_ = __deque_iterator.block_pos_;
+    element_pos_ = const_cast<pointer>(__deque_iterator.element_pos_);
 }
 
 template <typename T>

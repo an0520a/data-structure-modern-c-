@@ -127,7 +127,8 @@ public:
     using iterator_category = std::bidirectional_iterator_tag;
 
     DequeIterator() noexcept;
-    DequeIterator(const DequeIterator& __deque_iterator) noexcept;
+    // DequeIterator(const DequeIterator& __deque_iterator) noexcept;
+    DequeIterator(const DequeIterator<std::remove_const_t<value_type>>& __deque_iterator) noexcept;
     ~DequeIterator();
     DequeIterator& operator=(const DequeIterator&  __deque_iterator) noexcept;
     DequeIterator& operator++() noexcept;
@@ -146,10 +147,13 @@ public:
     DequeIterator operator--(int) noexcept;
 private:
     DequeIterator(typename Deque<std::remove_const_t<value_type>>::DequeBlock* __block_pos, value_type* __element_pos);
+    DequeIterator(const DequeIterator<std::add_const_t<value_type>>& __deque_iterator) noexcept;
     typename Deque<std::remove_const_t<value_type>>::DequeBlock* block_pos_;
     pointer element_pos_;
 
     friend class Deque<std::remove_const_t<value_type>>;
+    friend class DequeIterator<std::remove_const_t<value_type>>;
+    friend class DequeIterator<std::add_const_t<value_type>>;
 };
 
 #include "deque.cpp"
